@@ -37,7 +37,7 @@ VALID_SBDF = re.compile(r"^%s$" % _SBDF, re.X)
 
 VALID_SBDFI = re.compile(
     r"^(?P<sbdf>%s)"
-    r"  (?:[[](?P<index>[\d]{1,2})[]])?$"   # Index (optional)
+    r"  (?:[\[](?P<index>[\d]{1,2})[]])?$"   # Index (optional)
     % _SBDF
     , re.X)
 
