@@ -9,6 +9,13 @@ parameterized
 # dependencies also in setup.py until they can be used
 six
 
+# The mypy 1.0 no longer supports --py2 and
+# the mypy config in pyproject.toml targets Python 3.6:
+mypy             ; python_version > "3.6"
+types-mock       ; python_version > "3.6"
+types-simplejson ; python_version > "3.6"
+types-six        ; python_version > "3.6"
+
 # python-2.7 only
 configparser ; python_version < "3.0"
 pyliblzma ; python_version < "3.0"

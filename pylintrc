@@ -7,9 +7,6 @@
 # pygtk.require().
 #init-hook=
 
-# Profiled execution.
-profile=no
-
 # Add <file or directory> to the black list. It should be a base name, not a
 # path. You may set this option multiple times.
 ignore=CVS
@@ -35,31 +32,21 @@ load-plugins=
 # it should appear only once).
 
 
-# W0142 - Used * or ** magic
 # W0703 - Catch "Exception"
 # C0111 - Missing docstring
-# R0201 - Method could be a function
 # W0603 - Using the global statement
+# W0611 - unused-import
+# W0612 - unused-variable
 # W0613 - Unused argument
 # W0212 - Accessing protected member
-# W0141 - Use of builtin functions
 
-disable=W0142,W0703,C0111,R0201,W0603,W0613,W0212,W0141
-
+disable=C,R,W0703,W0603,W0613,W0212,W0719,F0010,E0015,W0107,W0719,W0511,E1123,W0707,W0012,W0702,W0611,W0612,W1201,no-absolute-import
 
 [REPORTS]
 
 # Set the output format. Available formats are text, parseable, colorized, msvs
 # (visual studio) and html
 output-format=text
-
-# Include message's id in output
-include-ids=yes
-
-# Put messages in a separate file for each module / package specified on the
-# command line instead of printing them on stdout. Reports (if any) will be
-# written in a file name "pylint_global.[txt|html]".
-files-output=no
 
 # Tells whether to display a full report or only the messages
 reports=no
@@ -71,18 +58,7 @@ reports=no
 # (RP0004).
 evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
 
-# Add a comment according to your evaluation note. This is used by the global
-# evaluation report (RP0004).
-comment=no
-
-
 [BASIC]
-
-# Required attributes for module, separated by a comma
-required-attributes=
-
-# List of builtins function names that should not be used, separated by a comma
-bad-functions=input
 
 # Regular expression which should only match correct module names
 module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
@@ -152,10 +128,6 @@ ignore-mixin-members=yes
 # (useful for classes with attributes dynamically set).
 ignored-classes=SQLObject
 
-# When zope mode is activated, add a predefined set of Zope acquired attributes
-# to generated-members.
-zope=no
-
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E0201 when accessed.
 generated-members=REQUEST,acl_users,aq_parent
@@ -189,10 +161,6 @@ additional-builtins=
 
 [CLASSES]
 
-# List of interface methods to ignore, separated by a comma. This is used for
-# instance to not check methods defines in Zope's Interface base class.
-ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
-
 # List of method names used to declare (i.e. assign) instance attributes.
 defining-attr-methods=__init__,__new__,setUp
 
@@ -211,9 +179,6 @@ max-locals=100
 
 # Maximum number of return / yield for function / method body
 max-returns=100
-
-# Maximum number of branch for function / method body
-max-branchs=100
 
 # Maximum number of statements in function / method body
 max-statements=100

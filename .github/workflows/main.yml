@@ -5,12 +5,13 @@ on: [push, pull_request]
 jobs:
   test:
     strategy:
+      max-parallel: 1
       matrix:
         include:
-        - python-version: '2.7'
-          os: ubuntu-20.04
         - python-version: '3'
           os: ubuntu-latest
+        - python-version: '2.7'
+          os: ubuntu-20.04
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -25,16 +26,33 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          pip install -r requirements-dev.txt pandas tabulate
           pip install -e .
 
-      - name: Test
+      - name: GitHub Actions Pylint Report
+        if: ${{ matrix.python-version != '2.7' }}
+        run: |
+          tool=github-action-pylint-report.py
+          repo=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY
+          tree=$repo/tree/$GITHUB_REF_NAME
+          ./github-action-pylint-report.py xcp pylint-report.md $tree
+          message_count=`tail -1 pylint-report.md|cut -d'|' -f2`
+          echo -n "### [$tool]($tree/$tool): **xcp/\\*\\*/*.py**"  >>$GITHUB_STEP_SUMMARY
+          echo " :rocket: #active Pylint messages: $message_count" >>$GITHUB_STEP_SUMMARY
+          cat pylint-report.md                                     >>$GITHUB_STEP_SUMMARY
+
+      - name: Run mypy checks
+        if: ${{ matrix.python-version != '2.7' }}
+        run: mypy
+
+      - name: Run pytest with --cov and generate coverage reports
         run: |
           pytest --cov -rP
           coverage xml
           coverage html -d htmlcov-${{ matrix.python-version }}
           coverage html -d htmlcov-tests-${{ matrix.python-version }} --include="tests/*"
           diff-cover --compare-branch=origin/master --html-report coverage-diff-${{ matrix.python-version }}.html coverage.xml
+
 
       - name: Pylint
         run: |
