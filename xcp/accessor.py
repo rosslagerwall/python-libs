@@ -36,6 +36,7 @@ import urllib.request           # pylint: disable=import-error
 import urllib.error             # pylint: disable=import-error
 import urllib.parse             # pylint: disable=import-error
 import errno
+from abc import abstractmethod
 
 import xcp.mount as mount
 import xcp.logger as logger
@@ -66,14 +67,14 @@ class Accessor(object):
             if not f:
                 return False
             f.close()
-        except Exception as e:
+        except Exception:
             return False
 
         return True
 
+    @abstractmethod
     def openAddress(self, address):
-        """should be overloaded"""
-        pass
+        """must be overloaded and return a file handle"""
 
     def canEject(self):
         return False
