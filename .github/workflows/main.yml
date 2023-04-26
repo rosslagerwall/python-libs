@@ -1,22 +1,46 @@
+# Can be run locally using act and docker, or in Fedora 39 also with podman, using:
+# act --bind --container-daemon-socket $XDG_RUNTIME_DIR/podman/podman.sock -W .github/workflows/main.yml
+
 name: Unit tests
 
-on: [push, pull_request]
+on: pull_request
+env:
+  PYTHONWARNINGS: "ignore"
 
 jobs:
   test:
     strategy:
+      max-parallel: 1
       matrix:
         include:
+        - python-version: '3.11'
+          os: ubuntu-latest
         - python-version: '2.7'
           os: ubuntu-20.04
-        - python-version: '3'
+        - python-version: '3.10'
           os: ubuntu-latest
+        - python-version: '3.9'
+          os: ubuntu-latest
+        - python-version: '3.8'
+          os: ubuntu-latest
+        - python-version: '3.7'
+          os: ubuntu-latest
+        - python-version: '3.6'
+          os: ubuntu-20.04
     runs-on: ${{ matrix.os }}
-
+    permissions:
+      # Gives the action the necessary permissions for publishing new
+      # comments in pull requests.
+      pull-requests: write
+      # Gives the action the necessary permissions for pushing data to the
+      # python-coverage-comment-action branch, and for editing existing
+      # comments (to avoid publishing multiple comments in the same PR)
+      contents: write
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          # ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0  # To get changed lines for coverage-diff: origin/master..HEAD
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -24,17 +48,45 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
-          pip install -e .
+          python -m pip install --quiet --upgrade pip
+          pip install --quiet -r requirements-dev.txt coveralls # FIXME:
+          if [ ${{ matrix.python-version }} = 2.7 ]; then python2 setup.py install --user;
+          else pip install --quiet -e .;fi
 
-      - name: Test
+      - name: Post a pylint Report on the Action's summary page
+        if: ${{ matrix.python-version == '3.9' }}
         run: |
-          pytest --cov -rP
+          pip install --quiet pandas tabulate
+          tool=github-action-pylint-report.py
+          repo=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY
+          tree=$repo/tree/$GITHUB_REF_NAME
+          ./github-action-pylint-report.py xcp pylint-report.md $tree
+          message_count=`tail -1 pylint-report.md|cut -d'|' -f2`
+          if [ -e $GITHUB_STEP_SUMMARY ]; then  #  The "act" local runner does not have this:
+              echo -n "### [$tool]($tree/$tool) on **xcp/\\*\\*/*.py**" >>$GITHUB_STEP_SUMMARY
+              echo ": #Total Pylint messages: $message_count :rocket: " >>$GITHUB_STEP_SUMMARY
+              cat pylint-report.md                                      >>$GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Run pytest with --cov and generate HTML coverage reports
+        id: coverage
+        if: ${{ matrix.python-version == '3.11' }}
+        run: |
+          set -x;PYTHONPATH=$PWD pytest --cov
           coverage xml
+          if [ -n "$COVERALLS_REPO_TOKEN" ]; then coveralls --submit=coverage.xml; fi
           coverage html -d htmlcov-${{ matrix.python-version }}
           coverage html -d htmlcov-tests-${{ matrix.python-version }} --include="tests/*"
           diff-cover --compare-branch=origin/master --html-report coverage-diff-${{ matrix.python-version }}.html coverage.xml
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Run tox for ${{ matrix.python-version }} (and also mypy if 3.11)"
+        if: ${{ matrix.python-version != '2.7' }}  # On Ubuntu 20.04 Python2.7, tox is older
+        run: |
+          set -ex;pip install --quiet --user --upgrade poetry tox tox-gh-actions
+          ~/.local/bin/tox  # Runs pytest & mypy in defined environments, simple to run locally
 
       - name: Pylint
         run: |
@@ -42,6 +94,21 @@ jobs:
           pylint --exit-zero xcp/ tests/ setup.py
           pylint --exit-zero --msg-template="{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}" xcp/ tests/ setup.py > pylint.txt
           diff-quality --compare-branch=origin/master --violations=pylint --html-report pylint-diff-${{ matrix.python-version }}.html pylint.txt
+
+      - name: Get Cover
+        if: github.event_name == 'pull_request' && steps.coverage.outcome == 'success'
+        uses: orgoro/coverage@v3
+        with:
+          # https://github.com/marketplace/actions/python-coverage
+          coverageFile: coverage.xml
+          thresholdNew: 0.80
+          thresholdAll: 0.67
+          thresholdModified: 0.20
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        if: github.event_name == 'pull_request' && steps.coverage.outcome == 'success'
 
       - uses: actions/upload-artifact@v3
         with:

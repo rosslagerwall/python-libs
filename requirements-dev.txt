@@ -1,6 +1,6 @@
 # necessary dev/test tasks
 pylint
-coverage
+coverage[toml]
 diff_cover
 mock
 pytest

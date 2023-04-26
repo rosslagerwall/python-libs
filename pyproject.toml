@@ -1,0 +1,168 @@
+# To run the tests for all supported and installed python version:
+# on Fedora 37, run: sudo dnf install tox, poetry && tox -r -epy27 -epy36 # or no args
+# Quick overview: https://pypi.org/project/poetry/
+# On Fedora, tox.rpm installs all Python versions, otherwise use pyenv to install them:
+# https://brandonrozek.com/blog/pyenvtox/
+# https://realpython.com/intro-to-pyenv/
+
+[tool.poetry]
+# Documentation: https://python-poetry.org/docs/pyproject
+name = "python-libs"
+version = "0.1.0"
+description = "Common XCP-ng Python classes"
+license = "BSD-2-Clause"
+authors = [
+    "Simon Rowe",
+    "Andrew Cooper",
+    "Yann Dirson",
+]
+maintainers = [
+    "Ross Lagerwall",
+    "Pau Ruiz Safont",
+    "Bernhard Kaindl",
+]
+readme = "README"
+homepage = "https://github.com/xenserver/python-libs/"
+repository = "https://github.com/xenserver/python-libs/"
+keywords = ["xcp-ng", "xen-project", "libraries"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 2.7",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: System :: Hardware",
+    "Topic :: System :: Installation/Setup",
+    "Topic :: System :: Networking",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+# https://python-poetry.org/docs/pyproject/#packages
+packages = [{ include = "xcp" }]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/xenserver/python-libs/issues"
+
+# Whenever you change dependencies by hand in your pyproject.toml,
+# you have to take care of these points
+# Run poetry lock --no-update afterwards. The reasons for this is, that poetry install
+# takes the poetry.lock as input if can find one and not the pyproject.toml.
+# If you change the python version and uses in-project virtualenv, remove the .venv
+# before running poetry install. poetry doesn't change the python version of a venv
+# once it is created, because it uses the python version itself to create the virtualenv.
+[tool.poetry.dependencies]
+# https://python-poetry.org/docs/dependency-specification/
+configparser = { version = "^4.0.2", python = "~2.7" }
+future = "^0.18.3"
+pyliblzma = { version = "^0.5.3", python = "~2.7" }
+six = "^1.16.0"
+
+[tool.poetry.dev-dependencies]
+mock = "^3.0.5"
+# Depended on by pytest 4.6.11, for py27, but not declared/installed by default:
+more_itertools = { version = "^5", python = "~2.7" }
+parameterized = "^0.8.1"
+pytest = [
+    { version = "^4.6.11", python = "~2.7" },
+    { version = "^6.2.5", python = "~3.6" },
+    { version = "^7", python = ">=3.7" },
+]
+
+[project.optional-dependencies]
+coverage = ["coverage", "diff_cover", "pytest-cov"]
+
+[tool.poetry.scripts]
+devtest = { callable = "mypackage:test.run_tests", extras = ["test"] }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+pretty = true
+show_error_context = true
+error_summary = true
+files = ["xcp", "tests/test_*.py", "stubs"]
+python_version = "3.6"
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+disallow_any_unimported = true
+disallow_any_explicit = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+show_error_codes = true
+strict_equality = true
+# Check the contents of untyped functions in all modules by default:
+check_untyped_defs = true
+
+# xcp.cmd is to be fixed in PR #22:
+[[tool.mypy.overrides]]
+module = ["xcp.cmd"]
+disable_error_code = ["operator", "comparison-overlap"]
+
+# xcp.accessor is be fixed with #24:
+[[tool.mypy.overrides]]
+module = ["xcp.accessor"]
+disable_error_code = "union-attr"
+
+# To be fixed with #24:
+[[tool.mypy.overrides]]
+module = ["xcp.net.biosdevname", "xcp.net.ifrename.logic"]
+disable_error_code = ["var-annotated", "no-any-return"]
+
+# xcp.net.ip should be is to be fixed in PR #22, but the ip output parser works anyway:
+[[tool.mypy.overrides]]
+module = ["xcp.net.ip"]
+disable_error_code = ["arg-type", "comparison-overlap"]
+
+# The blame list of modules with various errors/warnings in their untyped defs,
+# it shuts up 65 mypy errors, most are in cpiofile:
+[[tool.mypy.overrides]]
+module = [
+    "xcp.pci",        # xcp.pci should be fixed by PR #22
+    "xcp.cpiofile",
+    "xcp.repository",
+    "xcp.bootloader",
+]
+check_untyped_defs = false # enable to see the blame list
+disable_error_code = ["var-annotated", "unreachable"]
+
+# Most of these should be easily fixable by adding type annotations as comments(PEP484):
+
+[[tool.mypy.overrides]]
+module = ["tests.test_pci"]
+disable_error_code = ["no-any-return"]
+
+[[tool.mypy.overrides]]
+module = ["tests.test_mac"]
+disable_error_code = ["var-annotated"]
+
+[[tool.mypy.overrides]]
+module = ["tests.test_ifrename_logic"]
+disable_error_code = ["attr-defined", "no-any-return"]
+
+[[tool.mypy.overrides]]
+module = ["tests.test_bootloader"]
+disable_error_code = ["no-any-return", "union-attr"]
+
+[[tool.mypy.overrides]]
+module = ["tests.test_ifrename_logic"]
+disable_error_code = ["attr-defined", "no-any-return"]
+
+# Due to special cases for unicode handline in Python2 which are not reached by Python3:
+[[tool.mypy.overrides]]
+module = "xcp.xmlunwrap"
+warn_unreachable = false
+
+[tool.coverage.run]
+# The coverage-comment-action needs a .converage file with relative path names:
+# https://github.com/py-cov-action/python-coverage-comment-action#setup
+relative_files = true
